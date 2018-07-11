@@ -46,7 +46,7 @@ To download the real WMP library, you need to firstly install [Git LFS] and then
 clone this repository.
 
 ``` bash
-$ git clone https://github.com/mit-crpg/WMP_Library.git 
+$ git clone https://github.com/mit-crpg/WMP_Library.git
 ```
 
 ## Usage
@@ -57,14 +57,17 @@ cross sections at arbitrary temperature (in 0 K-3000 K range) and energy
 radiative capture, and fission.
 
 An excellent reference is [OpenMC], which implements WMP in both the transport
-solver and the [OpenMC Python API].
+solver and the [OpenMC Python API]. You can also check the scripts `scripts/WMP.py`
+for an Python implementation, which illustrates how to read, evaluate and export
+an windowed multipole format library.
 For example, the following script demonstrates how to utilize WMP library using
 the nuclear data interface [WindowedMultipole].
 
 ``` python
 # load a library
 import openmc.data
-u238_multipole = openmc.data.WindowedMultipole.from_hdf5('092238.h5')
+import WMP
+u238_multipole = WMP.WindowedMultipole.from_hdf5('092238.h5')
 
 # evaluate cross sections at a given energy and temperature
 total_xs, absorption_xs, fission_xs = u238_multipole(E=1.0, T=300.)

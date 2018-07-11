@@ -9,6 +9,7 @@ matplotlib.use("agg")
 import matplotlib.pyplot as plt
 
 import openmc.data
+import WMP
 
 from optparse import OptionParser
 
@@ -45,7 +46,7 @@ strTemp = "{}K".format(int(round(temp)))
 if options.wmpfile is not None:
   assert os.path.isfile(options.wmpfile), "wmp library {} not found".format(options.wmpfile)
   wmp_files = [options.wmpfile]
-else: 
+else:
   assert os.path.exists(wmp_dir), "wmp library dir {} not found".format(wmp_dir)
   wmp_files = glob.glob(os.path.join(wmp_dir, "*.h5"))
 
@@ -60,7 +61,7 @@ for i, wmp_library in enumerate(wmp_files):
   nuc_Z = int(wmp_name[0:3])
   nuc_A = int(wmp_name[3:6])
   nuc_m = wmp_name[6:-3]
-  nuc_name = openmc.data.ATOMIC_SYMBOL[nuc_Z]
+  nuc_name = WMP.ATOMIC_SYMBOL[nuc_Z]
   nuc_name += '{}'.format(nuc_A)
   if nuc_m is not '':
     nuc_name += '_{}'.format(nuc_m)
@@ -76,7 +77,7 @@ for i, wmp_library in enumerate(wmp_files):
   f = open(logfile, 'w');
 
   # load wmp data
-  nuc_wmp = openmc.data.WindowedMultipole.from_hdf5(wmp_library)
+  nuc_wmp = WMP.WindowedMultipole.from_hdf5(wmp_library)
   f.write("Load wmp library: {}".format(wmp_library))
   f.write("\n")
 
@@ -91,7 +92,7 @@ for i, wmp_library in enumerate(wmp_files):
   # load ace data
   nuc_ace = openmc.data.IncidentNeutron.from_hdf5(ace_file)
   assert strTemp in nuc_ace.temperatures, "ace file does not contain T={}".format(strTemp)
-  
+
   f.write("Load ace file: {}".format(ace_file))
   f.write("\n")
 
@@ -125,7 +126,7 @@ for i, wmp_library in enumerate(wmp_files):
     print("!!! Found negative cross sections in WMP library!")
 
   # compare
-  for i, rxn in enumerate(reactions): 
+  for i, rxn in enumerate(reactions):
     print("  -- {} cross section".format(rxn))
     rxn_wmp = xs_wmp[i]
     rxn_ace = xs_ace[i]
@@ -134,7 +135,7 @@ for i, wmp_library in enumerate(wmp_files):
     if not rxn_ace.any():
       continue
 
-    # max abs. error 
+    # max abs. error
     max_error = max(error)
     max_error_idx = np.argmax(error)
     max_error_energy = energy[max_error_idx]
@@ -144,14 +145,14 @@ for i, wmp_library in enumerate(wmp_files):
     f.write("\n")
     f.write("  energy: {}".format(max_error_energy))
     f.write("\n")
-    f.write("  wmp xs: {}".format(max_error_wmpxs))
+    f.write("  WMP xs: {}".format(max_error_wmpxs))
     f.write("\n")
-    f.write("  ace xs: {}".format(max_error_acexs))
+    f.write("  ACE xs: {}".format(max_error_acexs))
     f.write("\n")
     f.write("  error : {}".format(max_error))
     f.write("\n")
 
-    # max rel. error 
+    # max rel. error
     relerr = abs(rxn_wmp/rxn_ace - 1)
     relerr[rxn_ace == 0] = 0
     relerr2 = relerr
@@ -165,9 +166,9 @@ for i, wmp_library in enumerate(wmp_files):
     f.write("\n")
     f.write("  energy: {}".format(max_error_energy))
     f.write("\n")
-    f.write("  wmp xs: {}".format(max_error_wmpxs))
+    f.write("  WMP xs: {}".format(max_error_wmpxs))
     f.write("\n")
-    f.write("  ace xs: {}".format(max_error_acexs))
+    f.write("  ACE xs: {}".format(max_error_acexs))
     f.write("\n")
     f.write("  error : {:.2f}%".format(max_error*100))
     f.write("\n")
@@ -175,8 +176,8 @@ for i, wmp_library in enumerate(wmp_files):
     # plot
     plt.clf()
     fig, ax1 = plt.subplots()
-    lns1 = ax1.loglog(energy, rxn_wmp, 'g', label="wmp xs")
-    lns2 = ax1.loglog(energy, rxn_ace, 'b', label="ace xs")
+    lns1 = ax1.loglog(energy, rxn_wmp, 'g', label="WMP xs")
+    lns2 = ax1.loglog(energy, rxn_ace, 'b', label="ACE xs")
     ax2 = ax1.twinx()
     lns3 = ax2.loglog(energy, relerr, 'r', label="rel. err.", alpha=0.5)
     lns = lns1 + lns2 + lns3
@@ -191,7 +192,7 @@ for i, wmp_library in enumerate(wmp_files):
     plt.title("{} {} xs {}K".format(nuc_name, rxn, temp))
     fig.tight_layout()
     figfile = os.path.join(out_dir, "{}_validation_{}K_{}.png".format(nuc_name, temp, rxn))
-    plt.savefig(figfile)
+    plt.savefig(figfile, dpi=600)
     plt.close()
 
   f.close()
