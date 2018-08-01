@@ -1,19 +1,44 @@
 # Windowed Multipole Library
 
-This repository contains neutron cross section data for different
-isotopes in [windowed multipole (WMP)] format which allows for analytic
-on-the-fly Doppler broadening.
-The WMP representation of cross section has been used by [OpenMC].
+This repository contains neutron cross section data for isotopes in
+[windowed multipole (WMP)] format which requires less memory than pointwise
+cross sections and allows on-the-fly Doppler broadening to arbitrary temperature.
 
-As detailed in [1], the poles of the nuclides in this library have been generated
-by either conversion of resolved resonance parameters or using Vector Fitting.
+In WMP format, the entire energy range is chopped into equal-in-momentum domains
+, or windows. For window, poles in certain range are evaluated exactly and the
+ rest is curve-fitted by low-order polynomials.
+The 0K cross section can be expressed as:
+
+![wmp 0k](https://latex.codecogs.com/gif.latex?\sigma(E,&space;T=0\text{K})&space;=&space;\frac{1}{E}&space;\Re\left[\sum_{j=w_1}^{w_2}&space;\frac{ir_j}{\sqrt{E}-p_j}\right]&space;&plus;&space;\sum_{n=0}^{N}&space;c_n&space;E^{\frac{n}{2}-1})
+
+where ![wmp 0k](https://latex.codecogs.com/gif.latex?p_j) and
+![wmp 0k](https://latex.codecogs.com/gif.latex?r_j) are poles and residues in the complex
+plane and ![wmp 0k](https://latex.codecogs.com/gif.latex?c_n) is the polynomial coefficients.
+
+Both the poles term and polynomial term can be analytically Doppler broadened to
+any temperature.
+
+![wmp Tk](https://latex.codecogs.com/gif.latex?\sigma(E,&space;T)&space;\approx&space;\frac{\sqrt{\pi}}{2&space;E&space;\sqrt{\xi}}&space;\sum_j&space;\text{Re}&space;\left[r_j&space;W_i(z)\right]&space;&plus;&space;\sum_{n=0}^{N}c_n\mathcal{D}_n)
+
+![wmp Tk cont](https://latex.codecogs.com/gif.latex?W_i(z)&space;=&space;\frac{i}{\pi}&space;\int_{-\infty}^\infty&space;dt&space;\frac{e^{-t^2}}{z&space;-&space;t},)
+![wmp Tk cont](https://latex.codecogs.com/gif.latex?z&space;=&space;\frac{\sqrt{E}&space;-&space;p_j}{2&space;\sqrt{\xi}},)
+![wmp Tk cont](https://latex.codecogs.com/gif.latex?\xi&space;=&space;\frac{k_B&space;T}{4&space;A})
+
+![wmp Tk cont](https://latex.codecogs.com/gif.latex?\mathcal{D}_0&space;=&space;\frac{1}{E}erf(\sqrt{\alpha&space;E}),)
+![wmp Tk cont](https://latex.codecogs.com/gif.latex?\mathcal{D}_1&space;=&space;\frac{1}{\sqrt{E}},)
+![wmp Tk cont](https://latex.codecogs.com/gif.latex?\mathcal{D}_2=&space;\left[\frac{1}{\sqrt{2\alpha}}&space;&plus;&space;E&space;\right]\mathcal{D}_0&space;&plus;&space;\frac{e^{-\alpha&space;E}}{\sqrt{\alpha&space;\pi&space;E}})
+
+![wmp Tk cont](https://latex.codecogs.com/gif.latex?\mathcal{D}_{n&plus;2}=\left[\frac{2n&plus;1}{2\alpha}&space;&plus;&space;E&space;\right]\mathcal{D}_n&space;-&space;\frac{n(n-1)}{4\alpha^2}\mathcal{D}_{n-2},&space;n>0)
+
+The poles of the nuclides in this library have been generated using Vector
+Fitting technique [1].
 Then the [OpenW] code is used to process the multipole cross sections into
 windowed multipole library.
 
 The current library includes 423 nuclides processed from [ENDF/B VII.1] library,
 with a target maximum relative error for all cross sections of 0.1%.
 An overview of the library can be found in the table in
-'[Nuclides.md](./Nuclides.md)'.
+'[nuclides.md](./nuclides.md)'.
 
 More details about the windowed multipole method or multipole representation can
 be found in [2-4].
@@ -37,7 +62,8 @@ be found in [2-4].
 Windowed multipole data is stored in HDF5 files, containing the energy
 boundaries, window structure, poles/residues, and curve fit coefficients, etc.
 
-Detailed specifications can be found in [Windowed Multipole Library Format].
+Detailed specifications can be found in
+'[Windowed Multipole Library Format](./wmp_format.md)'.
 
 ## Download
 
