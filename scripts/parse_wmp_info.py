@@ -8,6 +8,7 @@ import WMP
 
 wmp_dir = "../WMP_Library" # WMP library PATH
 wmp_files = glob.glob(os.path.join(wmp_dir, "*.h5"))
+wmp_files.sort()
 
 nuclides = []
 headers = [
@@ -17,7 +18,6 @@ headers = [
           '# Poles',
           '# Windows',
           'CF Order',
-          'By VF'
          ]
 
 for i, wmp_library in enumerate(wmp_files):
@@ -38,18 +38,13 @@ for i, wmp_library in enumerate(wmp_files):
   n_wins = int((np.sqrt(nuc_wmp.end_E) - np.sqrt(nuc_wmp.start_E))/nuc_wmp.spacing + 1)
   result.append("{}".format(n_wins))
   result.append("{}".format(nuc_wmp.fit_order))
-  if len(nuc_wmp.pseudo_k0RS) == 0 or (
-        len(nuc_wmp.pseudo_k0RS) == 1 and nuc_wmp.pseudo_k0RS[0] == 0.):
-    result.append("Y")
-  else:
-    result.append(" ")
 
   nuclides.append(result)
 
 # dump nuclides
-output_file = '../Nuclides.md'
-format_str = '| {:8} | {:11} | {:28} | {:7} | {:9} | {:8} | {:5} |\n'
-table_sep = ['-'*8, '-'*11, '-'*28, '-'*7, '-'*9, '-'*8, '-'*5]
+output_file = '../nuclides.md'
+format_str = '| {:8} | {:11} | {:28} | {:7} | {:9} | {:8} |\n'
+table_sep = ['-'*8, '-'*11, '-'*28, '-'*7, '-'*9, '-'*8]
 with open(output_file, 'w') as f:
   f.write('# WMP Library Overview\n\n')
   f.write(format_str.format(*headers))

@@ -6,28 +6,18 @@ import h5py
 import numpy as np
 
 # Version of WMP nuclear data format
-WMP_VERSION = 'v0.2'
+WMP_VERSION = 'v1.0'
 
 # The value of the Boltzman constant in units of eV / K
 K_BOLTZMANN = 8.6173303e-5
 
-# Formalisms
-_FORM_MLBW = 2
-_FORM_RM   = 3
-
 # Constants that determine which value to access
 _MP_EA = 0       # Pole
 
-# Reich-Moore indices
-_RM_RT = 1       # Residue total
-_RM_RA = 2       # Residue absorption
-_RM_RF = 3       # Residue fission
-
-# Multi-level Breit Wigner indices
-_MLBW_RT = 1     # Residue total
-_MLBW_RX = 2     # Residue competitive
-_MLBW_RA = 3     # Residue absorption
-_MLBW_RF = 4     # Residue fission
+# Residue indices
+_MP_RT = 1       # Residue total
+_MP_RA = 2       # Residue absorption
+_MP_RF = 3       # Residue fission
 
 # Polynomial fit indices
 _FIT_T = 0       # Total
@@ -235,21 +225,13 @@ class WindowedMultipole(object):
 
     Parameters
     ----------
-    formalism : {'MLBW', 'RM'}
-        The R-matrix formalism used to reconstruct resonances.  Either 'MLBW'
-        for multi-level Breit Wigner or 'RM' for Reich-Moore.
 
     Attributes
     ----------
-    num_l : Integral
-        Number of possible l quantum states for this nuclide.
     fit_order : Integral
         Order of the windowed curvefit.
     fissionable : bool
         Whether or not the target nuclide has fission data.
-    formalism : {'MLBW', 'RM'}
-        The R-matrix formalism used to reconstruct resonances.  Either 'MLBW'
-        for multi-level Breit Wigner or 'RM' for Reich-Moore.
     spacing : Real
         The width of each window in sqrt(E)-space.  For example, the frst window
         will end at (sqrt(start_E) + spacing)**2 and the second window at
@@ -263,18 +245,8 @@ class WindowedMultipole(object):
     data : np.ndarray
         A 2D array of complex poles and residues.  data[i, 0] gives the energy
         at which pole i is located.  data[i, 1:] gives the residues associated
-        with the i-th pole.  There are 3 residues for Reich-Moore data, one each
-        for the total, absorption, and fission channels.  Multi-level
-        Breit Wigner data has an additional residue for the competitive channel.
-    pseudo_k0RS : np.ndarray
-        A 1D array of Real values.  There is one value for each valid l
-        quantum number.  The values are equal to
-        sqrt(2 m / hbar) * AWR / (AWR + 1) * r
-        where m is the neutron mass, AWR is the atomic weight ratio, and r
-        is the l-dependent scattering radius.
-    l_value : np.ndarray
-        A 1D array of Integral values equal to the l quantum number for each
-        pole + 1.
+        with the i-th pole.  There are 3 residues, one each for the total,
+        absorption, and fission channels.
     w_start : np.ndarray
         A 1D array of Integral values.  w_start[i] - 1 is the index of the first
         pole in window i.
@@ -293,24 +265,16 @@ class WindowedMultipole(object):
         a/E + b/sqrt(E) + c + d sqrt(E) + ...
 
     """
-    def __init__(self, formalism):
-        self._num_l = None
-        self.formalism = formalism
+    def __init__(self):
         self.spacing = None
         self.sqrtAWR = None
         self.start_E = None
         self.end_E = None
         self.data = None
-        self.pseudo_k0RS = None
-        self.l_value = None
         self.w_start = None
         self.w_end = None
         self.broaden_poly = None
         self.curvefit = None
-
-    @property
-    def num_l(self):
-        return self._num_l
 
     @property
     def fit_order(self):
@@ -318,15 +282,7 @@ class WindowedMultipole(object):
 
     @property
     def fissionable(self):
-        if self.formalism == 'RM':
-            return self.data.shape[1] == 4
-        else:
-            # Assume self.formalism == 'MLBW'
-            return self.data.shape[1] == 5
-
-    @property
-    def formalism(self):
-        return self._formalism
+        return self.data.shape[1] == 4
 
     @property
     def spacing(self):
@@ -349,10 +305,6 @@ class WindowedMultipole(object):
         return self._data
 
     @property
-    def pseudo_k0RS(self):
-        return self._pseudo_k0RS
-
-    @property
     def l_value(self):
         return self._l_value
 
@@ -371,12 +323,6 @@ class WindowedMultipole(object):
     @property
     def curvefit(self):
         return self._curvefit
-
-    @formalism.setter
-    def formalism(self, formalism):
-        check_type('formalism', formalism, str)
-        check_value('formalism', formalism, ('MLBW', 'RM'))
-        self._formalism = formalism
 
     @spacing.setter
     def spacing(self, spacing):
@@ -412,50 +358,14 @@ class WindowedMultipole(object):
             check_type('data', data, np.ndarray)
             if len(data.shape) != 2:
                 raise ValueError('Multipole data arrays must be 2D')
-            if self.formalism == 'RM':
-                if data.shape[1] not in (3, 4):
-                    raise ValueError('For the Reich-Moore formalism, '
-                         'data.shape[1] must be 3 or 4. One value for the pole.'
-                         ' One each for the total and absorption residues. '
-                         'Possibly one more for a fission residue.')
-            else:
-                # Assume self.formalism == 'MLBW'
-                if data.shape[1] not in (4, 5):
-                    raise ValueError('For the Multi-level Breit-Wigner '
-                         'formalism, data.shape[1] must be 4 or 5.  One value '
-                         'for the pole. One each for the total, competitive, '
-                         'and absorption residues. Possibly one more for a '
-                         'fission residue.')
+            if data.shape[1] not in (3, 4):
+                raise ValueError(
+                     'data.shape[1] must be 3 or 4. One value for the pole.'
+                     ' One each for the total and absorption residues. '
+                     'Possibly one more for a fission residue.')
             if not np.issubdtype(data.dtype, complex):
                 raise TypeError('Multipole data arrays must be complex dtype')
         self._data = data
-
-    @pseudo_k0RS.setter
-    def pseudo_k0RS(self, pseudo_k0RS):
-        if pseudo_k0RS is not None:
-            check_type('pseudo_k0RS', pseudo_k0RS, np.ndarray)
-            if len(pseudo_k0RS.shape) != 1:
-                raise ValueError('Multipole pseudo_k0RS arrays must be 1D')
-            if not np.issubdtype(pseudo_k0RS.dtype, float):
-                raise TypeError('Multipole data arrays must be float dtype')
-        self._pseudo_k0RS = pseudo_k0RS
-
-    @l_value.setter
-    def l_value(self, l_value):
-        if l_value is not None:
-            check_type('l_value', l_value, np.ndarray)
-            if len(l_value.shape) != 1:
-                raise ValueError('Multipole l_value arrays must be 1D')
-            if not np.issubdtype(l_value.dtype, int):
-                raise TypeError('Multipole l_value arrays must be integer'
-                                ' dtype')
-
-            self._num_l = len(np.unique(l_value))
-
-        else:
-            self._num_l = None
-
-        self._l_value = l_value
 
     @w_start.setter
     def w_start(self, w_start):
@@ -535,14 +445,9 @@ class WindowedMultipole(object):
                     'Python API expects version ' + WMP_VERSION)
             group = h5file['nuclide']
 
-        # Read scalars.
+        out = cls()
 
-        if group['formalism'].value == _FORM_MLBW:
-            out = cls('MLBW')
-        elif group['formalism'].value == _FORM_RM:
-            out = cls('RM')
-        else:
-            raise ValueError('Unrecognized/Unsupported R-matrix formalism')
+        # Read scalars.
 
         out.spacing = group['spacing'].value
         out.sqrtAWR = group['sqrtAWR'].value
@@ -554,14 +459,6 @@ class WindowedMultipole(object):
         err = "WMP '{}' array shape is not consistent with the '{}' array shape"
 
         out.data = group['data'].value
-
-        out.l_value = group['l_value'].value
-        if out.l_value.shape[0] != out.data.shape[0]:
-            raise ValueError(err.format('l_value', 'data'))
-
-        out.pseudo_k0RS = group['pseudo_K0RS'].value
-        if out.pseudo_k0RS.shape[0] != out.num_l:
-            raise ValueError(err.format('pseudo_k0RS', 'l_value'))
 
         out.w_start = group['w_start'].value
 
@@ -621,28 +518,6 @@ class WindowedMultipole(object):
         startw = self.w_start[i_window] - 1
         endw = self.w_end[i_window]
 
-        # Fill in factors.  Because of the unique interference dips in scatering
-        # resonances, the total cross section has a special "factor" that does
-        # not appear in the absorption and fission equations.
-        if startw <= endw:
-            twophi = np.zeros(self.num_l, dtype=np.float)
-            sig_t_factor = np.zeros(self.num_l, dtype=np.cfloat)
-
-            for iL in range(self.num_l):
-                twophi[iL] = self.pseudo_k0RS[iL] * sqrtE
-                if iL == 1:
-                    twophi[iL] = twophi[iL] - np.arctan(twophi[iL])
-                elif iL == 2:
-                    arg = 3.0 * twophi[iL] / (3.0 - twophi[iL]**2)
-                    twophi[iL] = twophi[iL] - np.arctan(arg)
-                elif iL == 3:
-                    arg = (twophi[iL] * (15.0 - twophi[iL]**2)
-                           / (15.0 - 6.0 * twophi[iL]**2))
-                    twophi[iL] = twophi[iL] - np.arctan(arg)
-
-            twophi = 2.0 * twophi
-            sig_t_factor = np.cos(twophi) - 1j*np.sin(twophi)
-
         # Initialize the ouptut cross sections.
         sig_t = 0.0
         sig_a = 0.0
@@ -681,22 +556,10 @@ class WindowedMultipole(object):
             for i_pole in range(startw, endw):
                 psi_chi = -1j / (self.data[i_pole, _MP_EA] - sqrtE)
                 c_temp = psi_chi / E
-                if self.formalism == 'MLBW':
-                    sig_t += ((self.data[i_pole, _MLBW_RT] * c_temp *
-                               sig_t_factor[self.l_value[i_pole]-1]).real
-                              + (self.data[i_pole, _MLBW_RX] * c_temp).real)
-                    sig_a += (self.data[i_pole, _MLBW_RA] * c_temp).real
-                    if self.fissionable:
-                        sig_f += (self.data[i_pole, _MLBW_RF] * c_temp).real
-                elif self.formalism == 'RM':
-                    sig_t += (self.data[i_pole, _RM_RT] * c_temp *
-                              sig_t_factor[self.l_value[i_pole]-1]).real
-                    sig_a += (self.data[i_pole, _RM_RA] * c_temp).real
-                    if self.fissionable:
-                        sig_f += (self.data[i_pole, _RM_RF] * c_temp).real
-                else:
-                    raise ValueError('Unrecognized/Unsupported R-matrix'
-                                     ' formalism')
+                sig_t += (self.data[i_pole, _MP_RT] * c_temp).real
+                sig_a += (self.data[i_pole, _MP_RA] * c_temp).real
+                if self.fissionable:
+                    sig_f += (self.data[i_pole, _MP_RF] * c_temp).real
 
         else:
             # At temperature, use Faddeeva function-based form.
@@ -704,22 +567,10 @@ class WindowedMultipole(object):
             for i_pole in range(startw, endw):
                 Z = (sqrtE - self.data[i_pole, _MP_EA]) * dopp
                 w_val = _faddeeva(Z) * dopp * invE * sqrt(pi)
-                if self.formalism == 'MLBW':
-                    sig_t += ((self.data[i_pole, _MLBW_RT] *
-                               sig_t_factor[self.l_value[i_pole]-1] +
-                               self.data[i_pole, _MLBW_RX]) * w_val).real
-                    sig_a += (self.data[i_pole, _MLBW_RA] * w_val).real
-                    if self.fissionable:
-                        sig_f += (self.data[i_pole, _MLBW_RF] * w_val).real
-                elif self.formalism == 'RM':
-                    sig_t += (self.data[i_pole, _RM_RT] * w_val *
-                              sig_t_factor[self.l_value[i_pole]-1]).real
-                    sig_a += (self.data[i_pole, _RM_RA] * w_val).real
-                    if self.fissionable:
-                        sig_f += (self.data[i_pole, _RM_RF] * w_val).real
-                else:
-                    raise ValueError('Unrecognized/Unsupported R-matrix'
-                                     ' formalism')
+                sig_t += (self.data[i_pole, _MP_RT] * w_val).real
+                sig_a += (self.data[i_pole, _MP_RA] * w_val).real
+                if self.fissionable:
+                    sig_f += (self.data[i_pole, _MP_RF] * w_val).real
 
         return sig_t, sig_a, sig_f
 
@@ -766,13 +617,6 @@ class WindowedMultipole(object):
             g = f.create_group('nuclide')
 
             # Write scalars.
-            if self.formalism == 'MLBW':
-                g.create_dataset('formalism',
-                                 data=np.array(_FORM_MLBW, dtype=np.int32))
-            else:
-                # Assume RM.
-                g.create_dataset('formalism',
-                                 data=np.array(_FORM_RM, dtype=np.int32))
             g.create_dataset('spacing', data=np.array(self.spacing))
             g.create_dataset('sqrtAWR', data=np.array(self.sqrtAWR))
             g.create_dataset('start_E', data=np.array(self.start_E))
@@ -780,8 +624,6 @@ class WindowedMultipole(object):
 
             # Write arrays.
             g.create_dataset('data', data=self.data)
-            g.create_dataset('l_value', data=self.l_value)
-            g.create_dataset('pseudo_K0RS', data=self.pseudo_k0RS)
             g.create_dataset('w_start', data=self.w_start)
             g.create_dataset('w_end', data=self.w_end)
             g.create_dataset('broaden_poly',

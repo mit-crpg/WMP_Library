@@ -15,7 +15,7 @@ from optparse import OptionParser
 
 WMP_PATH = "../WMP_Library" # WMP library PATH
 ACE_PATH = "../../njoy_293.75K" # ACE library PATH
-OUT_PATH = "./Validation" # OUTPUT PATH
+OUT_PATH = "../WMP_Validation" # OUTPUT PATH
 TEMPERATURE = 293.75
 
 # Command line parsing
@@ -155,7 +155,7 @@ for i, wmp_library in enumerate(wmp_files):
     # max rel. error
     relerr = abs(rxn_wmp/rxn_ace - 1)
     relerr[rxn_ace == 0] = 0
-    relerr2 = relerr
+    relerr2 = np.array(relerr)
     relerr2[error <= 1E-5] = 0
     max_error = max(relerr2)
     max_error_idx = np.argmax(relerr2)
