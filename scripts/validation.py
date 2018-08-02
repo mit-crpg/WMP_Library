@@ -84,7 +84,7 @@ for i, wmp_library in enumerate(wmp_files):
   # write info
   f.write("Energy range: {} {}".format(nuc_wmp.start_E, nuc_wmp.end_E))
   f.write("\n")
-  f.write("Number of windows: {}".format(len(nuc_wmp.w_start)))
+  f.write("Number of windows: {}".format(nuc_wmp.windows.shape[0]))
   f.write("\n")
   f.write("Fissionable: {}".format(nuc_wmp.fissionable))
   f.write("\n")
@@ -116,8 +116,8 @@ for i, wmp_library in enumerate(wmp_files):
   xs_wmp = np.zeros((len(mts), len(energy)))
   xs_ace = np.zeros((len(mts), len(energy)))
 
-  xs_wmp[[0,2,3], :] = nuc_wmp(energy, temp)
-  xs_wmp[1, :] = xs_wmp[0, :] - xs_wmp[2, :]
+  xs_wmp[[1,2,3], :] = nuc_wmp(energy, temp)
+  xs_wmp[0, :] = xs_wmp[1, :] + xs_wmp[2, :]
   for i, mt in enumerate(mts):
     if mt in nuc_ace:
       xs_ace[i, :] = nuc_ace[mt].xs[strTemp](energy)

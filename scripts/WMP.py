@@ -15,12 +15,12 @@ K_BOLTZMANN = 8.6173303e-5
 _MP_EA = 0       # Pole
 
 # Residue indices
-_MP_RT = 1       # Residue total
+_MP_RS = 1       # Residue scattering
 _MP_RA = 2       # Residue absorption
 _MP_RF = 3       # Residue fission
 
 # Polynomial fit indices
-_FIT_T = 0       # Total
+_FIT_S = 0       # Scattering
 _FIT_A = 1       # Absorption
 _FIT_F = 2       # Fission
 
@@ -245,20 +245,18 @@ class WindowedMultipole(object):
     data : np.ndarray
         A 2D array of complex poles and residues.  data[i, 0] gives the energy
         at which pole i is located.  data[i, 1:] gives the residues associated
-        with the i-th pole.  There are 3 residues, one each for the total,
+        with the i-th pole.  There are 3 residues, one each for the scattering,
         absorption, and fission channels.
-    w_start : np.ndarray
-        A 1D array of Integral values.  w_start[i] - 1 is the index of the first
-        pole in window i.
-    w_end : np.ndarray
-        A 1D array of Integral values.  w_end[i] - 1 is the index of the last
-        pole in window i.
+    windows : np.ndarray
+        A 2D array of Integral values.  windows[i, 0] - 1 is the index of the
+        first pole in window i. windows[i, 1] - 1 is the index of the last pole
+        in window i.
     broaden_poly : np.ndarray
         A 1D array of boolean values indicating whether or not the polynomial
         curvefit in that window should be Doppler broadened.
     curvefit : np.ndarray
         A 3D array of Real curvefit polynomial coefficients.  curvefit[i, 0, :]
-        gives coefficients for the total cross section in window i.
+        gives coefficients for the scattering cross section in window i.
         curvefit[i, 1, :] gives absorption coefficients and curvefit[i, 2, :]
         gives fission coefficients.  The polynomial terms are increasing powers
         of sqrt(E) starting with 1/E e.g:
@@ -271,8 +269,7 @@ class WindowedMultipole(object):
         self.start_E = None
         self.end_E = None
         self.data = None
-        self.w_start = None
-        self.w_end = None
+        self.windows = None
         self.broaden_poly = None
         self.curvefit = None
 
@@ -309,12 +306,8 @@ class WindowedMultipole(object):
         return self._l_value
 
     @property
-    def w_start(self):
-        return self._w_start
-
-    @property
-    def w_end(self):
-        return self._w_end
+    def windows(self):
+        return self._windows
 
     @property
     def broaden_poly(self):
@@ -361,32 +354,22 @@ class WindowedMultipole(object):
             if data.shape[1] not in (3, 4):
                 raise ValueError(
                      'data.shape[1] must be 3 or 4. One value for the pole.'
-                     ' One each for the total and absorption residues. '
+                     ' One each for the scattering and absorption residues. '
                      'Possibly one more for a fission residue.')
             if not np.issubdtype(data.dtype, complex):
                 raise TypeError('Multipole data arrays must be complex dtype')
         self._data = data
 
-    @w_start.setter
-    def w_start(self, w_start):
-        if w_start is not None:
-            check_type('w_start', w_start, np.ndarray)
-            if len(w_start.shape) != 1:
-                raise ValueError('Multipole w_start arrays must be 1D')
-            if not np.issubdtype(w_start.dtype, int):
-                raise TypeError('Multipole w_start arrays must be integer'
+    @windows.setter
+    def windows(self, windows):
+        if windows is not None:
+            check_type('windows', windows, np.ndarray)
+            if len(windows.shape) != 2:
+                raise ValueError('Multipole windows arrays must be 2D')
+            if not np.issubdtype(windows.dtype, int):
+                raise TypeError('Multipole windows arrays must be integer'
                                 ' dtype')
-        self._w_start = w_start
-
-    @w_end.setter
-    def w_end(self, w_end):
-        if w_end is not None:
-            check_type('w_end', w_end, np.ndarray)
-            if len(w_end.shape) != 1:
-                raise ValueError('Multipole w_end arrays must be 1D')
-            if not np.issubdtype(w_end.dtype, int):
-                raise TypeError('Multipole w_end arrays must be integer dtype')
-        self._w_end = w_end
+        self._windows = windows
 
     @broaden_poly.setter
     def broaden_poly(self, broaden_poly):
@@ -405,7 +388,7 @@ class WindowedMultipole(object):
             check_type('curvefit', curvefit, np.ndarray)
             if len(curvefit.shape) != 3:
                 raise ValueError('Multipole curvefit arrays must be 3D')
-            if curvefit.shape[2] not in (2, 3):  # sig_t, sig_a (maybe sig_f)
+            if curvefit.shape[2] not in (2, 3):  # sig_s, sig_a (maybe sig_f)
                 raise ValueError('The third dimension of multipole curvefit'
                                  ' arrays must have a length of 2 or 3')
             if not np.issubdtype(curvefit.dtype, float):
@@ -460,19 +443,15 @@ class WindowedMultipole(object):
 
         out.data = group['data'].value
 
-        out.w_start = group['w_start'].value
-
-        out.w_end = group['w_end'].value
-        if out.w_end.shape[0] != out.w_start.shape[0]:
-            raise ValueError(err.format('w_end', 'w_start'))
+        out.windows = group['windows'].value
 
         out.broaden_poly = group['broaden_poly'].value.astype(np.bool)
-        if out.broaden_poly.shape[0] != out.w_start.shape[0]:
-            raise ValueError(err.format('broaden_poly', 'w_start'))
+        if out.broaden_poly.shape[0] != out.windows.shape[0]:
+            raise ValueError(err.format('broaden_poly', 'windows'))
 
         out.curvefit = group['curvefit'].value
-        if out.curvefit.shape[0] != out.w_start.shape[0]:
-            raise ValueError(err.format('curvefit', 'w_start'))
+        if out.curvefit.shape[0] != out.windows.shape[0]:
+            raise ValueError(err.format('curvefit', 'windows'))
 
         # _broaden_wmp_polynomials assumes the curve fit has at least 3 terms.
         if out.fit_order < 2:
@@ -482,7 +461,7 @@ class WindowedMultipole(object):
         return out
 
     def _evaluate(self, E, T):
-        """Compute total, absorption, and fission cross sections.
+        """Compute scattering, absorption, and fission cross sections.
 
         Parameters
         ----------
@@ -515,11 +494,11 @@ class WindowedMultipole(object):
         # decreased by 1.  endw does not need to be decreased because
         # range(startw, endw) does not include endw.
         i_window = int(np.floor((sqrtE - sqrt(self.start_E)) / self.spacing))
-        startw = self.w_start[i_window] - 1
-        endw = self.w_end[i_window]
+        startw = self.windows[i_window, 0] - 1
+        endw = self.windows[i_window, 1]
 
         # Initialize the ouptut cross sections.
-        sig_t = 0.0
+        sig_s = 0.0
         sig_a = 0.0
         sig_f = 0.0
 
@@ -532,7 +511,7 @@ class WindowedMultipole(object):
             broadened_polynomials = _broaden_wmp_polynomials(E, dopp,
                                                              self.fit_order + 1)
             for i_poly in range(self.fit_order+1):
-                sig_t += (self.curvefit[i_window, i_poly, _FIT_T]
+                sig_s += (self.curvefit[i_window, i_poly, _FIT_S]
                           * broadened_polynomials[i_poly])
                 sig_a += (self.curvefit[i_window, i_poly, _FIT_A]
                           * broadened_polynomials[i_poly])
@@ -542,7 +521,7 @@ class WindowedMultipole(object):
         else:
             temp = invE
             for i_poly in range(self.fit_order+1):
-                sig_t += self.curvefit[i_window, i_poly, _FIT_T] * temp
+                sig_s += self.curvefit[i_window, i_poly, _FIT_S] * temp
                 sig_a += self.curvefit[i_window, i_poly, _FIT_A] * temp
                 if self.fissionable:
                     sig_f += self.curvefit[i_window, i_poly, _FIT_F] * temp
@@ -556,7 +535,7 @@ class WindowedMultipole(object):
             for i_pole in range(startw, endw):
                 psi_chi = -1j / (self.data[i_pole, _MP_EA] - sqrtE)
                 c_temp = psi_chi / E
-                sig_t += (self.data[i_pole, _MP_RT] * c_temp).real
+                sig_s += (self.data[i_pole, _MP_RS] * c_temp).real
                 sig_a += (self.data[i_pole, _MP_RA] * c_temp).real
                 if self.fissionable:
                     sig_f += (self.data[i_pole, _MP_RF] * c_temp).real
@@ -567,15 +546,15 @@ class WindowedMultipole(object):
             for i_pole in range(startw, endw):
                 Z = (sqrtE - self.data[i_pole, _MP_EA]) * dopp
                 w_val = _faddeeva(Z) * dopp * invE * sqrt(pi)
-                sig_t += (self.data[i_pole, _MP_RT] * w_val).real
+                sig_s += (self.data[i_pole, _MP_RS] * w_val).real
                 sig_a += (self.data[i_pole, _MP_RA] * w_val).real
                 if self.fissionable:
                     sig_f += (self.data[i_pole, _MP_RF] * w_val).real
 
-        return sig_t, sig_a, sig_f
+        return sig_s, sig_a, sig_f
 
     def __call__(self, E, T):
-        """Compute total, absorption, and fission cross sections.
+        """Compute scattering, absorption, and fission cross sections.
 
         Parameters
         ----------
@@ -624,8 +603,7 @@ class WindowedMultipole(object):
 
             # Write arrays.
             g.create_dataset('data', data=self.data)
-            g.create_dataset('w_start', data=self.w_start)
-            g.create_dataset('w_end', data=self.w_end)
+            g.create_dataset('windows', data=self.windows)
             g.create_dataset('broaden_poly',
                              data=self.broaden_poly.astype(np.int8))
             g.create_dataset('curvefit', data=self.curvefit)

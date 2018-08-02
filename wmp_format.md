@@ -24,9 +24,9 @@
 
    ![data](https://latex.codecogs.com/gif.latex?\text{data}[:,i]&space;=&space;[\text{pole}_i,&space;~\text{residue}_{i1},&space;~\text{residue}_{i2},&space;~\text{residue}_{i3}])
 
-    The residues are in the order: total, absorption, fission. Complex
+    The residues are in the order: scattering, absorption, fission. Complex
     numbers are stored by forming a type with "r" and "i" identifiers,
-    similar to how [h5py]_ does it.
+    similar to how [h5py] does it.
 
 - **end_E** (*double*)
 
@@ -50,12 +50,9 @@
 
     Lowest energy the windowed multipole part of the library is valid for.
 
-- **w_start** (*int[]*)
+- **windows** (*int[][]*)
 
-    The pole to start from for each window.
-
-- **w_end** (*int[]*)
-
-    The pole to end at for each window.
+    The pole to start from for each window. windows[i, 0] - 1 and windows[i, 1]
+    -1  are the indexes of the first and last pole in window i respectively.
 
 [h5py]: http://docs.h5py.org/en/latest/

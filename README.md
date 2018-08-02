@@ -95,14 +95,14 @@ import WMP
 u238_multipole = WMP.WindowedMultipole.from_hdf5('092238.h5')
 
 # evaluate cross sections at a given energy and temperature
-total_xs, absorption_xs, fission_xs = u238_multipole(E=1.0, T=300.)
+scatt_xs, absorption_xs, fission_xs = u238_multipole(E=1.0, T=300.)
 
 # comparison with ACE library (HDF5 format used in OpenMC)
 import openmc.data
 u238_ace = openmc.data.IncidentNeutron.from_hdf5('U238.h5')
 energy = np.logspace(np.log10(u238_multipole.start_E), np.log10(u238_multipole.end_E), 1E4)
-total_xs_wmp = u238_multipole(energy, T=293.75)[0]
-total_xs_ace = u238_ace[1].xs['294K'](energy)
+scatt_xs_wmp = u238_multipole(energy, T=293.75)[0]
+scatt_xs_ace = u238_ace[2].xs['294K'](energy)
 # then you can plot the cross sections with energies
 ```
 
@@ -118,5 +118,5 @@ total_xs_ace = u238_ace[1].xs['294K'](energy)
 [Windowed Multipole Library Format]: http://openmc.readthedocs.io/en/latest/io_formats/data_wmp.html#io-data-wmp
 [Git LFS]: https://git-lfs.github.com
 [OpenMC Python API]: http://openmc.readthedocs.io/en/latest/pythonapi/index.html
-[WindowedMultipole]: https://github.com/liangjg/WMP_Library/blob/develop/scripts/WMP.py
+[WindowedMultipole]: https://github.com/mit-crpg/WMP_Library/blob/master/scripts/WMP.py
 [Computational Reactor Physics Group (CRPG)]: http://crpg.mit.edu/
