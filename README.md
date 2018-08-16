@@ -100,7 +100,7 @@ scatt_xs, absorption_xs, fission_xs = u238_multipole(E=1.0, T=300.)
 # comparison with ACE library (HDF5 format used in OpenMC)
 import openmc.data
 u238_ace = openmc.data.IncidentNeutron.from_hdf5('U238.h5')
-energy = np.logspace(np.log10(u238_multipole.start_E), np.log10(u238_multipole.end_E), 1E4)
+energy = np.logspace(np.log10(u238_multipole.E_min), np.log10(u238_multipole.E_max), 1E4)
 scatt_xs_wmp = u238_multipole(energy, T=293.75)[0]
 scatt_xs_ace = u238_ace[2].xs['294K'](energy)
 # then you can plot the cross sections with energies

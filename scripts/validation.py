@@ -82,7 +82,7 @@ for i, wmp_library in enumerate(wmp_files):
   f.write("\n")
 
   # write info
-  f.write("Energy range: {} {}".format(nuc_wmp.start_E, nuc_wmp.end_E))
+  f.write("Energy range: {} {}".format(nuc_wmp.E_min, nuc_wmp.E_max))
   f.write("\n")
   f.write("Number of windows: {}".format(nuc_wmp.windows.shape[0]))
   f.write("\n")
@@ -97,8 +97,8 @@ for i, wmp_library in enumerate(wmp_files):
   f.write("\n")
 
   # energy grid for comparison
-  max_e = nuc_wmp.end_E
-  min_e = nuc_wmp.start_E
+  max_e = nuc_wmp.E_max
+  min_e = nuc_wmp.E_min
   N_points = 1E4
   energy = np.logspace(np.log10(min_e), np.log10(max_e), N_points)
   energy[0] = min_e

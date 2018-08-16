@@ -234,13 +234,13 @@ class WindowedMultipole(object):
         Whether or not the target nuclide has fission data.
     spacing : Real
         The width of each window in sqrt(E)-space.  For example, the frst window
-        will end at (sqrt(start_E) + spacing)**2 and the second window at
-        (sqrt(start_E) + 2*spacing)**2.
+        will end at (sqrt(E_min) + spacing)**2 and the second window at
+        (sqrt(E_min) + 2*spacing)**2.
     sqrtAWR : Real
         Square root of the atomic weight ratio of the target nuclide.
-    start_E : Real
+    E_min : Real
         Lowest energy in eV the library is valid for.
-    end_E : Real
+    E_max : Real
         Highest energy in eV the library is valid for.
     data : np.ndarray
         A 2D array of complex poles and residues.  data[i, 0] gives the energy
@@ -266,8 +266,8 @@ class WindowedMultipole(object):
     def __init__(self):
         self.spacing = None
         self.sqrtAWR = None
-        self.start_E = None
-        self.end_E = None
+        self.E_min = None
+        self.E_max = None
         self.data = None
         self.windows = None
         self.broaden_poly = None
@@ -290,20 +290,16 @@ class WindowedMultipole(object):
         return self._sqrtAWR
 
     @property
-    def start_E(self):
-        return self._start_E
+    def E_min(self):
+        return self._E_min
 
     @property
-    def end_E(self):
-        return self._end_E
+    def E_max(self):
+        return self._E_max
 
     @property
     def data(self):
         return self._data
-
-    @property
-    def l_value(self):
-        return self._l_value
 
     @property
     def windows(self):
@@ -331,19 +327,19 @@ class WindowedMultipole(object):
             check_greater_than('sqrtAWR', sqrtAWR, 0.0, equality=False)
         self._sqrtAWR = sqrtAWR
 
-    @start_E.setter
-    def start_E(self, start_E):
-        if start_E is not None:
-            check_type('start_E', start_E, Real)
-            check_greater_than('start_E', start_E, 0.0, equality=True)
-        self._start_E = start_E
+    @E_min.setter
+    def E_min(self, E_min):
+        if E_min is not None:
+            check_type('E_min', E_min, Real)
+            check_greater_than('E_min', E_min, 0.0, equality=True)
+        self._E_min = E_min
 
-    @end_E.setter
-    def end_E(self, end_E):
-        if end_E is not None:
-            check_type('end_E', end_E, Real)
-            check_greater_than('end_E', end_E, 0.0, equality=False)
-        self._end_E = end_E
+    @E_max.setter
+    def E_max(self, E_max):
+        if E_max is not None:
+            check_type('E_max', E_max, Real)
+            check_greater_than('E_max', E_max, 0.0, equality=False)
+        self._E_max = E_max
 
     @data.setter
     def data(self, data):
@@ -434,8 +430,8 @@ class WindowedMultipole(object):
 
         out.spacing = group['spacing'].value
         out.sqrtAWR = group['sqrtAWR'].value
-        out.start_E = group['start_E'].value
-        out.end_E = group['end_E'].value
+        out.E_min = group['E_min'].value
+        out.E_max = group['E_max'].value
 
         # Read arrays.
 
@@ -478,8 +474,8 @@ class WindowedMultipole(object):
 
         """
 
-        if E < self.start_E: return (0, 0, 0)
-        if E > self.end_E: return (0, 0, 0)
+        if E < self.E_min: return (0, 0, 0)
+        if E > self.E_max: return (0, 0, 0)
 
         # ======================================================================
         # Bookkeeping
@@ -493,7 +489,7 @@ class WindowedMultipole(object):
         # the 1-based vs. 0-based indexing.  Similarly startw needs to be
         # decreased by 1.  endw does not need to be decreased because
         # range(startw, endw) does not include endw.
-        i_window = int(np.floor((sqrtE - sqrt(self.start_E)) / self.spacing))
+        i_window = int(np.floor((sqrtE - sqrt(self.E_min)) / self.spacing))
         startw = self.windows[i_window, 0] - 1
         endw = self.windows[i_window, 1]
 
@@ -598,8 +594,8 @@ class WindowedMultipole(object):
             # Write scalars.
             g.create_dataset('spacing', data=np.array(self.spacing))
             g.create_dataset('sqrtAWR', data=np.array(self.sqrtAWR))
-            g.create_dataset('start_E', data=np.array(self.start_E))
-            g.create_dataset('end_E', data=np.array(self.end_E))
+            g.create_dataset('E_min', data=np.array(self.E_min))
+            g.create_dataset('E_max', data=np.array(self.E_max))
 
             # Write arrays.
             g.create_dataset('data', data=self.data)

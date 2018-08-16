@@ -33,7 +33,7 @@ for i, wmp_library in enumerate(wmp_files):
 
   result.append(nuc_name)
   result.append(wmp_name)
-  result.append("[{:e}, {:e}]".format(nuc_wmp.start_E, nuc_wmp.end_E))
+  result.append("[{:e}, {:e}]".format(nuc_wmp.E_min, nuc_wmp.E_max))
   result.append("{}".format(nuc_wmp.data.shape[0]))
   n_wins = nuc_wmp.windows.shape[0]
   result.append("{}".format(n_wins))
