@@ -5,8 +5,8 @@ This repository contains neutron cross section data for isotopes in
 cross sections and allows on-the-fly Doppler broadening to arbitrary temperature.
 
 In WMP format, the entire energy range is chopped into equal-in-momentum domains
-, or windows. For window, poles in certain range are evaluated exactly and the
- rest is curve-fitted by low-order polynomials.
+, or windows. For each window, poles in certain range are evaluated exactly and
+the rest is curve-fitted by low-order polynomials.
 The 0K cross section can be expressed as:
 
 ![wmp 0k](https://latex.codecogs.com/gif.latex?\sigma(E,&space;T=0\text{K})&space;=&space;\frac{1}{E}&space;\Re\left[\sum_{j=w_1}^{w_2}&space;\frac{ir_j}{\sqrt{E}-p_j}\right]&space;&plus;&space;\sum_{n=0}^{N}&space;c_n&space;E^{\frac{n}{2}-1})
@@ -80,7 +80,7 @@ $ git clone https://github.com/mit-crpg/WMP_Library.git
 With the windowed multipole library, it is convenient and efficient to compute
 cross sections at arbitrary temperature (in 0 K-3000 K range) and energy
 (in the resolved resonance range) for 4 reactions: total, elastic scattering,
-radiative capture, and fission.
+absorption, and fission.
 
 An excellent reference is [OpenMC], which implements WMP in both the transport
 solver and the [OpenMC Python API]. You can also check the scripts `scripts/WMP.py`
@@ -91,18 +91,18 @@ the nuclear data interface [WindowedMultipole].
 
 ``` python
 # load a library
-import openmc.data
 import WMP
 u238_multipole = WMP.WindowedMultipole.from_hdf5('092238.h5')
 
 # evaluate cross sections at a given energy and temperature
-total_xs, absorption_xs, fission_xs = u238_multipole(E=1.0, T=300.)
+scatt_xs, absorption_xs, fission_xs = u238_multipole(E=1.0, T=300.)
 
 # comparison with ACE library (HDF5 format used in OpenMC)
+import openmc.data
 u238_ace = openmc.data.IncidentNeutron.from_hdf5('U238.h5')
-energy = np.logspace(np.log10(u238_multipole.start_E), np.log10(u238_multipole.end_E), 1E4)
-total_xs_wmp = u238_multipole(energy, T=293.75)[0]
-total_xs_ace = u238_ace[1].xs['294K'](energy)
+energy = np.logspace(np.log10(u238_multipole.E_min), np.log10(u238_multipole.E_max), 1E4)
+scatt_xs_wmp = u238_multipole(energy, T=293.75)[0]
+scatt_xs_ace = u238_ace[2].xs['294K'](energy)
 # then you can plot the cross sections with energies
 ```
 
@@ -118,5 +118,5 @@ total_xs_ace = u238_ace[1].xs['294K'](energy)
 [Windowed Multipole Library Format]: http://openmc.readthedocs.io/en/latest/io_formats/data_wmp.html#io-data-wmp
 [Git LFS]: https://git-lfs.github.com
 [OpenMC Python API]: http://openmc.readthedocs.io/en/latest/pythonapi/index.html
-[WindowedMultipole]: https://github.com/mit-crpg/openmc/blob/develop/openmc/data/multipole.py
+[WindowedMultipole]: https://github.com/mit-crpg/WMP_Library/blob/master/scripts/WMP.py
 [Computational Reactor Physics Group (CRPG)]: http://crpg.mit.edu/

@@ -15,7 +15,7 @@ from optparse import OptionParser
 
 WMP_PATH = "../WMP_Library" # WMP library PATH
 ACE_PATH = "../../njoy_293.75K" # ACE library PATH
-OUT_PATH = "./Validation" # OUTPUT PATH
+OUT_PATH = "../WMP_Validation" # OUTPUT PATH
 TEMPERATURE = 293.75
 
 # Command line parsing
@@ -82,9 +82,9 @@ for i, wmp_library in enumerate(wmp_files):
   f.write("\n")
 
   # write info
-  f.write("Energy range: {} {}".format(nuc_wmp.start_E, nuc_wmp.end_E))
+  f.write("Energy range: {} {}".format(nuc_wmp.E_min, nuc_wmp.E_max))
   f.write("\n")
-  f.write("Number of windows: {}".format(len(nuc_wmp.w_start)))
+  f.write("Number of windows: {}".format(nuc_wmp.windows.shape[0]))
   f.write("\n")
   f.write("Fissionable: {}".format(nuc_wmp.fissionable))
   f.write("\n")
@@ -97,8 +97,8 @@ for i, wmp_library in enumerate(wmp_files):
   f.write("\n")
 
   # energy grid for comparison
-  max_e = nuc_wmp.end_E
-  min_e = nuc_wmp.start_E
+  max_e = nuc_wmp.E_max
+  min_e = nuc_wmp.E_min
   N_points = 1E4
   energy = np.logspace(np.log10(min_e), np.log10(max_e), N_points)
   energy[0] = min_e
@@ -116,8 +116,8 @@ for i, wmp_library in enumerate(wmp_files):
   xs_wmp = np.zeros((len(mts), len(energy)))
   xs_ace = np.zeros((len(mts), len(energy)))
 
-  xs_wmp[[0,2,3], :] = nuc_wmp(energy, temp)
-  xs_wmp[1, :] = xs_wmp[0, :] - xs_wmp[2, :]
+  xs_wmp[[1,2,3], :] = nuc_wmp(energy, temp)
+  xs_wmp[0, :] = xs_wmp[1, :] + xs_wmp[2, :]
   for i, mt in enumerate(mts):
     if mt in nuc_ace:
       xs_ace[i, :] = nuc_ace[mt].xs[strTemp](energy)
@@ -155,7 +155,7 @@ for i, wmp_library in enumerate(wmp_files):
     # max rel. error
     relerr = abs(rxn_wmp/rxn_ace - 1)
     relerr[rxn_ace == 0] = 0
-    relerr2 = relerr
+    relerr2 = np.array(relerr)
     relerr2[error <= 1E-5] = 0
     max_error = max(relerr2)
     max_error_idx = np.argmax(relerr2)
