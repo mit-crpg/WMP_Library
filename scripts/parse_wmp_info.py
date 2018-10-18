@@ -23,13 +23,8 @@ headers = [
 for i, wmp_library in enumerate(wmp_files):
   result = []
   nuc_wmp = WMP.WindowedMultipole.from_hdf5(wmp_library)
-
+  nuc_name = nuc_wmp.name
   wmp_name = os.path.basename(wmp_library)
-  atomic_number = int(wmp_name[0:3])
-  mass_number = int(wmp_name[3:6])
-  nuc_name = WMP.ATOMIC_SYMBOL[atomic_number] + str(mass_number)
-  if wmp_name[6:-3] is not '':
-    nuc_name += '_{}'.format(wmp_name[6:-3])
 
   result.append(nuc_name)
   result.append(wmp_name)

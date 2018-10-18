@@ -57,14 +57,9 @@ if not os.path.exists(out_dir):
 
 print("Start validating {} nuclides - {}".format(len(wmp_files), time.ctime()))
 for i, wmp_library in enumerate(wmp_files):
-  wmp_name = os.path.basename(wmp_library)
-  nuc_Z = int(wmp_name[0:3])
-  nuc_A = int(wmp_name[3:6])
-  nuc_m = wmp_name[6:-3]
-  nuc_name = WMP.ATOMIC_SYMBOL[nuc_Z]
-  nuc_name += '{}'.format(nuc_A)
-  if nuc_m is not '':
-    nuc_name += '_{}'.format(nuc_m)
+  # load wmp data
+  nuc_wmp = WMP.WindowedMultipole.from_hdf5(wmp_library)
+  nuc_name = nuc_wmp.name
 
   print("{:>3}/{:<3} Processing {} {} - {} ".format(
           i+1, len(wmp_files), nuc_name, wmp_library, time.ctime()))
@@ -75,11 +70,6 @@ for i, wmp_library in enumerate(wmp_files):
   logfile_name = '{}_{}K_validation.log'.format(nuc_name, temp)
   logfile = os.path.join(out_dir, logfile_name);
   f = open(logfile, 'w');
-
-  # load wmp data
-  nuc_wmp = WMP.WindowedMultipole.from_hdf5(wmp_library)
-  f.write("Load wmp library: {}".format(wmp_library))
-  f.write("\n")
 
   # write info
   f.write("Energy range: {} {}".format(nuc_wmp.E_min, nuc_wmp.E_max))

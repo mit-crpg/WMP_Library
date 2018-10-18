@@ -67,13 +67,21 @@ Detailed specifications can be found in
 
 ## Download
 
-[Git LFS] is used to store the binary HDF5 files.
-To download the real WMP library, you need to firstly install [Git LFS] and then
-clone this repository.
+- download the compressed library from the latest releases: https://github.com/mit-crpg/WMP_Library/releases
 
-``` bash
-$ git clone https://github.com/mit-crpg/WMP_Library.git
-```
+  ``` bash
+  $ wget https://github.com/mit-crpg/WMP_Library/releases/download/v1.0.1/WMP_Library_v1.0.1.tar.gz
+  ```
+
+- clone from git repository 
+
+  [Git LFS] is used to store the binary HDF5 files.
+  To download the real WMP library, you need to firstly install [Git LFS] and
+  then clone this repository.
+
+  ``` bash
+  $ git clone https://github.com/mit-crpg/WMP_Library.git
+  ```
 
 ## Usage
 
@@ -84,7 +92,7 @@ absorption, and fission.
 
 An excellent reference is [OpenMC], which implements WMP in both the transport
 solver and the [OpenMC Python API]. You can also check the scripts `scripts/WMP.py`
-for an Python implementation, which illustrates how to read, evaluate and export
+for a Python implementation, which illustrates how to read, evaluate and export
 an windowed multipole format library.
 For example, the following script demonstrates how to utilize WMP library using
 the nuclear data interface [WindowedMultipole].
