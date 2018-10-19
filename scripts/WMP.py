@@ -6,7 +6,9 @@ import h5py
 import numpy as np
 
 # Version of WMP nuclear data format
-WMP_VERSION = 'v1.0'
+WMP_VERSION_MAJOR = 1
+WMP_VERSION_MINOR = 1
+WMP_VERSION = (WMP_VERSION_MAJOR, WMP_VERSION_MINOR)
 
 # The value of the Boltzman constant in units of eV / K
 K_BOLTZMANN = 8.6173303e-5
@@ -23,29 +25,6 @@ _MP_RF = 3       # Residue fission
 _FIT_S = 0       # Scattering
 _FIT_A = 1       # Absorption
 _FIT_F = 2       # Fission
-
-ATOMIC_SYMBOL = {0: 'n', 1: 'H', 2: 'He', 3: 'Li', 4: 'Be', 5: 'B', 6: 'C',
-                 7: 'N', 8: 'O', 9: 'F', 10: 'Ne', 11: 'Na', 12: 'Mg', 13: 'Al',
-                 14: 'Si', 15: 'P', 16: 'S', 17: 'Cl', 18: 'Ar', 19: 'K',
-                 20: 'Ca', 21: 'Sc', 22: 'Ti', 23: 'V', 24: 'Cr', 25: 'Mn',
-                 26: 'Fe', 27: 'Co', 28: 'Ni', 29: 'Cu', 30: 'Zn', 31: 'Ga',
-                 32: 'Ge', 33: 'As', 34: 'Se', 35: 'Br', 36: 'Kr', 37: 'Rb',
-                 38: 'Sr', 39: 'Y', 40: 'Zr', 41: 'Nb', 42: 'Mo', 43: 'Tc',
-                 44: 'Ru', 45: 'Rh', 46: 'Pd', 47: 'Ag', 48: 'Cd', 49: 'In',
-                 50: 'Sn', 51: 'Sb', 52: 'Te', 53: 'I', 54: 'Xe', 55: 'Cs',
-                 56: 'Ba', 57: 'La', 58: 'Ce', 59: 'Pr', 60: 'Nd', 61: 'Pm',
-                 62: 'Sm', 63: 'Eu', 64: 'Gd', 65: 'Tb', 66: 'Dy', 67: 'Ho',
-                 68: 'Er', 69: 'Tm', 70: 'Yb', 71: 'Lu', 72: 'Hf', 73: 'Ta',
-                 74: 'W', 75: 'Re', 76: 'Os', 77: 'Ir', 78: 'Pt', 79: 'Au',
-                 80: 'Hg', 81: 'Tl', 82: 'Pb', 83: 'Bi', 84: 'Po', 85: 'At',
-                 86: 'Rn', 87: 'Fr', 88: 'Ra', 89: 'Ac', 90: 'Th', 91: 'Pa',
-                 92: 'U', 93: 'Np', 94: 'Pu', 95: 'Am', 96: 'Cm', 97: 'Bk',
-                 98: 'Cf', 99: 'Es', 100: 'Fm', 101: 'Md', 102: 'No',
-                 103: 'Lr', 104: 'Rf', 105: 'Db', 106: 'Sg', 107: 'Bh',
-                 108: 'Hs', 109: 'Mt', 110: 'Ds', 111: 'Rg', 112: 'Cn',
-                 113: 'Nh', 114: 'Fl', 115: 'Mc', 116: 'Lv', 117: 'Ts',
-                 118: 'Og'}
-ATOMIC_NUMBER = {value: key for key, value in ATOMIC_SYMBOL.items()}
 
 def check_type(name, value, expected_type):
     r"""Ensure that an object is of an expected type.
@@ -263,7 +242,8 @@ class WindowedMultipole(object):
         a/E + b/sqrt(E) + c + d sqrt(E) + ...
 
     """
-    def __init__(self):
+    def __init__(self, name):
+        self.name = name
         self.spacing = None
         self.sqrtAWR = None
         self.E_min = None
@@ -272,6 +252,10 @@ class WindowedMultipole(object):
         self.windows = None
         self.broaden_poly = None
         self.curvefit = None
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def fit_order(self):
@@ -312,6 +296,11 @@ class WindowedMultipole(object):
     @property
     def curvefit(self):
         return self._curvefit
+
+    @name.setter
+    def name(self, name):
+        check_type('name', name, str)
+        self._name = name
 
     @spacing.setter
     def spacing(self, spacing):
@@ -414,17 +403,25 @@ class WindowedMultipole(object):
             group = group_or_filename
         else:
             h5file = h5py.File(group_or_filename, 'r')
-            try:
-                version = h5file['version'].value.decode()
-            except AttributeError:
-                version = h5file['version'].value[0].decode()
-            if version != WMP_VERSION:
-                raise ValueError('The given WMP data uses version '
-                    + version + ' whereas your installation of the OpenMC '
-                    'Python API expects version ' + WMP_VERSION)
-            group = h5file['nuclide']
 
-        out = cls()
+            # Make sure version matches
+            if 'version' in h5file.attrs:
+                major, minor = h5file.attrs['version']
+                if major != WMP_VERSION_MAJOR:
+                    raise IOError(
+                        'WMP data format uses version {}. {} whereas your '
+                        'installation of the OpenMC Python API expects version '
+                        '{}.x.'.format(major, minor, WMP_VERSION_MAJOR))
+            else:
+                raise IOError(
+                    'WMP data does not indicate a version. Your installation of '
+                    'the OpenMC Python API expects version {}.x data.'
+                    .format(WMP_VERSION_MAJOR))
+
+            group = list(h5file.values())[0]
+
+        name = group.name[1:]
+        out = cls(name)
 
         # Read scalars.
 
@@ -570,13 +567,16 @@ class WindowedMultipole(object):
         fun = np.vectorize(lambda x: self._evaluate(x, T))
         return fun(E)
 
-    def export_to_hdf5(self, path, libver='earliest'):
+    def export_to_hdf5(self, path, mode='a', libver='earliest'):
         """Export windowed multipole data to an HDF5 file.
 
         Parameters
         ----------
         path : str
             Path to write HDF5 file to
+        mode : {'r', r+', 'w', 'x', 'a'}
+            Mode that is used to open the HDF5 file. This is the second argument
+            to the :class:`h5py.File` constructor.
         libver : {'earliest', 'latest'}
             Compatibility mode for the HDF5 file. 'latest' will produce files
             that are less backwards compatible but have performance benefits.
@@ -584,12 +584,11 @@ class WindowedMultipole(object):
         """
 
         # Open file and write version.
-        with h5py.File(path, 'w', libver=libver) as f:
-            f.create_dataset('version', (1, ), dtype='S10')
-            f['version'][:] = WMP_VERSION.encode('ASCII')
+        with h5py.File(path, mode, libver=libver) as f:
+            f.attrs['filetype'] = np.string_('data_wmp')
+            f.attrs['version'] = np.array(WMP_VERSION)
 
-            # Make a nuclide group.
-            g = f.create_group('nuclide')
+            g = f.create_group(self.name)
 
             # Write scalars.
             g.create_dataset('spacing', data=np.array(self.spacing))
