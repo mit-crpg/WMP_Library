@@ -72,19 +72,17 @@ for i, wmp_library in enumerate(wmp_files):
   f = open(logfile, 'w');
 
   # write info
-  f.write("Energy range: {} {}".format(nuc_wmp.E_min, nuc_wmp.E_max))
-  f.write("\n")
-  f.write("Number of windows: {}".format(nuc_wmp.windows.shape[0]))
-  f.write("\n")
-  f.write("Fissionable: {}".format(nuc_wmp.fissionable))
-  f.write("\n")
+  f.write("WMP file: {}\n".format(wmp_library))
+  f.write("Nuclide: {}\n".format(nuc_name))
+  f.write("Energy range: [{}, {}] eV\n".format(nuc_wmp.E_min, nuc_wmp.E_max))
+  f.write("Number of windows: {}\n".format(nuc_wmp.windows.shape[0]))
+  f.write("Fissionable: {}\n".format(nuc_wmp.fissionable))
 
   # load ace data
   nuc_ace = openmc.data.IncidentNeutron.from_hdf5(ace_file)
   assert strTemp in nuc_ace.temperatures, "ace file does not contain T={}".format(strTemp)
 
-  f.write("Load ace file: {}".format(ace_file))
-  f.write("\n")
+  f.write("Load ace file: {}\n".format(ace_file))
 
   # energy grid for comparison
   max_e = nuc_wmp.E_max
@@ -93,10 +91,8 @@ for i, wmp_library in enumerate(wmp_files):
   energy = np.logspace(np.log10(min_e), np.log10(max_e), N_points)
   energy[0] = min_e
   energy[-1] = max_e
-  f.write("Test energy range: {} {} eV".format(energy[0], energy[-1]))
-  f.write("\n")
-  f.write("Test temperature: {} K".format(temp))
-  f.write("\n")
+  f.write("Test energy range: [{}, {}] eV\n".format(energy[0], energy[-1]))
+  f.write("Test temperature: {} K\n".format(temp))
 
   # reactions for comparison
   mts = [1, 2, 27, 18]
@@ -131,16 +127,11 @@ for i, wmp_library in enumerate(wmp_files):
     max_error_energy = energy[max_error_idx]
     max_error_wmpxs = rxn_wmp[max_error_idx]
     max_error_acexs = rxn_ace[max_error_idx]
-    f.write("{} Max abs error: ".format(rxn))
-    f.write("\n")
-    f.write("  energy: {}".format(max_error_energy))
-    f.write("\n")
-    f.write("  WMP xs: {}".format(max_error_wmpxs))
-    f.write("\n")
-    f.write("  ACE xs: {}".format(max_error_acexs))
-    f.write("\n")
-    f.write("  error : {}".format(max_error))
-    f.write("\n")
+    f.write("{} - max abs error:\n".format(rxn))
+    f.write("  energy: {}\n".format(max_error_energy))
+    f.write("  WMP xs: {}\n".format(max_error_wmpxs))
+    f.write("  ACE xs: {}\n".format(max_error_acexs))
+    f.write("  error : {}\n".format(max_error))
 
     # max rel. error
     relerr = abs(rxn_wmp/rxn_ace - 1)
@@ -152,16 +143,11 @@ for i, wmp_library in enumerate(wmp_files):
     max_error_energy = energy[max_error_idx]
     max_error_wmpxs = rxn_wmp[max_error_idx]
     max_error_acexs = rxn_ace[max_error_idx]
-    f.write("{} Max rel error: ".format(rxn))
-    f.write("\n")
-    f.write("  energy: {}".format(max_error_energy))
-    f.write("\n")
-    f.write("  WMP xs: {}".format(max_error_wmpxs))
-    f.write("\n")
-    f.write("  ACE xs: {}".format(max_error_acexs))
-    f.write("\n")
-    f.write("  error : {:.2f}%".format(max_error*100))
-    f.write("\n")
+    f.write("{} - max rel error:\n".format(rxn))
+    f.write("  energy: {}\n".format(max_error_energy))
+    f.write("  WMP xs: {}\n".format(max_error_wmpxs))
+    f.write("  ACE xs: {}\n".format(max_error_acexs))
+    f.write("  error : {:.2f}%\n".format(max_error*100))
 
     # plot
     plt.clf()

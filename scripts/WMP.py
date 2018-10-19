@@ -6,7 +6,9 @@ import h5py
 import numpy as np
 
 # Version of WMP nuclear data format
-WMP_VERSION = 'v1.0'
+WMP_VERSION_MAJOR = 1
+WMP_VERSION_MINOR = 1
+WMP_VERSION = (WMP_VERSION_MAJOR, WMP_VERSION_MINOR)
 
 # The value of the Boltzman constant in units of eV / K
 K_BOLTZMANN = 8.6173303e-5
@@ -401,14 +403,21 @@ class WindowedMultipole(object):
             group = group_or_filename
         else:
             h5file = h5py.File(group_or_filename, 'r')
-            try:
-                version = h5file['version'].value.decode()
-            except AttributeError:
-                version = h5file['version'].value[0].decode()
-            if version != WMP_VERSION:
-                raise ValueError('The given WMP data uses version '
-                    + version + ' whereas your installation of the OpenMC '
-                    'Python API expects version ' + WMP_VERSION)
+
+            # Make sure version matches
+            if 'version' in h5file.attrs:
+                major, minor = h5file.attrs['version']
+                if major != WMP_VERSION_MAJOR:
+                    raise IOError(
+                        'WMP data format uses version {}. {} whereas your '
+                        'installation of the OpenMC Python API expects version '
+                        '{}.x.'.format(major, minor, WMP_VERSION_MAJOR))
+            else:
+                raise IOError(
+                    'WMP data does not indicate a version. Your installation of '
+                    'the OpenMC Python API expects version {}.x data.'
+                    .format(WMP_VERSION_MAJOR))
+
             group = list(h5file.values())[0]
 
         name = group.name[1:]
@@ -577,8 +586,7 @@ class WindowedMultipole(object):
         # Open file and write version.
         with h5py.File(path, mode, libver=libver) as f:
             f.attrs['filetype'] = np.string_('data_wmp')
-            f.create_dataset('version', (1, ), dtype='S10')
-            f['version'][:] = WMP_VERSION.encode('ASCII')
+            f.attrs['version'] = np.array(WMP_VERSION)
 
             g = f.create_group(self.name)
 
